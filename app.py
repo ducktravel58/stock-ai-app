@@ -1,38 +1,65 @@
 import streamlit as st
 import yfinance as yf
+from openai import OpenAI
 
-st.title("📊 무료 종목 분석 시스템")
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+st.title("📊 AI 기반 11단계 종목 분석 시스템")
 
 ticker = st.text_input("종목 티커 입력 (예: AAPL, TSLA)")
 
-def analyze(ticker):
+PROMPTS = [
+    "1. 이 회사의 사업을 아주 쉽게 설명해줘.",
+    "2. 최근 뉴스와 이슈를 요약해줘.",
+    "3. 산업 트렌드와 위치를 설명해줘.",
+    "4. 경쟁우위를 분석해줘.",
+    "5. 재무 건전성을 평가해줘.",
+    "6. 주요 리스크를 정리해줘.",
+    "7. 3년 시나리오 분석을 해줘.",
+    "8. 거시환경 민감도를 분석해줘.",
+    "9. 밸류에이션 맥락을 설명해줘.",
+    "10. 장기 투자 테제를 작성해줘.",
+    "11. 최종 종합 결론을 내려줘."
+]
+
+def ai_analyze(prompt):
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
+    )
+    return response.output_text
+
+def run_analysis(ticker):
     stock = yf.Ticker(ticker)
     info = stock.info
 
-    result = f"""
-📌 기업명: {info.get("longName","N/A")}
-📌 시가총액: {info.get("marketCap","N/A")}
-📌 PER: {info.get("trailingPE","N/A")}
-📌 PBR: {info.get("priceToBook","N/A")}
-📌 ROE: {info.get("returnOnEquity","N/A")}
-📌 매출 성장률: {info.get("revenueGrowth","N/A")}
-📌 업종: {info.get("sector","N/A")}
-📌 국가: {info.get("country","N/A")}
-
-📊 종합 해석:
-이 종목은 재무 지표 기준으로 장기 투자 관점에서 
-{'우수' if info.get("returnOnEquity",0)>0.15 else '보통'}한 수익성을 보이고 있으며,
-PER 기준으로 {'저평가' if info.get("trailingPE",99)<20 else '고평가'} 구간입니다.
+    base_data = f"""
+기업명: {info.get('longName')}
+시가총액: {info.get('marketCap')}
+PER: {info.get('trailingPE')}
+PBR: {info.get('priceToBook')}
+ROE: {info.get('returnOnEquity')}
+매출성장률: {info.get('revenueGrowth')}
+업종: {info.get('sector')}
 """
 
-    return result
+    full_report = ""
 
-if st.button("분석 실행"):
+    for p in PROMPTS:
+        query = f"{p}\n\n기업 데이터:\n{base_data}\n\n종목:{ticker}"
+        answer = ai_analyze(query)
+        full_report += f"\n\n### {p}\n{answer}\n"
+
+    return full_report
+
+
+if st.button("11단계 AI 분석 실행"):
     if ticker:
-        try:
-            result = analyze(ticker)
-            st.text(result)
-        except:
-            st.error("티커 오류 또는 데이터 없음")
+        with st.spinner("AI 분석 중..."):
+            try:
+                result = run_analysis(ticker)
+                st.markdown(result)
+            except Exception as e:
+                st.error(e)
     else:
         st.warning("티커를 입력하세요.")
