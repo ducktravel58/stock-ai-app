@@ -1,46 +1,76 @@
 import streamlit as st
-import requests
-import json
+import yfinance as yf
+import pandas as pd
 
-API_KEY = "AIzaSyCLPLeL68Q9BwIUQFkH1fQ5dIadjD0yxdc"
-MODEL = "models/gemini-1.5-flash"
+st.set_page_config(page_title="무료 종목 분석", layout="centered")
+st.title("📊 무료 종목 분석 시스템")
 
+ticker = st.text_input("종목 티커 입력 (예: AAPL, TSLA)")
 
+def analyze_stock(ticker):
+    stock = yf.Ticker(ticker)
+    info = stock.info
 
-import json
-import requests
+    roe = info.get("returnOnEquity", 0)
+    pe = info.get("trailingPE", 0)
+    pb = info.get("priceToBook", 0)
+    margin = info.get("profitMargins", 0)
+    growth = info.get("revenueGrowth", 0)
+    debt = info.get("debtToEquity", 0)
+    beta = info.get("beta", 0)
+    dividend = info.get("dividendYield", 0)
+    cash = info.get("totalCash", 0)
+    fcf = info.get("freeCashflow", 0)
+    op_margin = info.get("operatingMargins", 0)
 
-def ask_gemini(prompt):
-    url = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent?key={API_KEY}"
+    score = 0
+    if roe > 0.15: score += 1
+    if pe and pe < 20: score += 1
+    if pb and pb < 3: score += 1
+    if margin > 0.1: score += 1
+    if growth > 0.05: score += 1
+    if debt and debt < 100: score += 1
+    if beta and beta < 1.3: score += 1
+    if dividend and dividend > 0.02: score += 1
+    if cash: score += 1
+    if fcf: score += 1
+    if op_margin > 0.1: score += 1
 
-    payload = {
-        "contents": [
-            {"parts": [{"text": prompt}]} 
-        ]
+    final_score = int(score / 11 * 100)
+
+    if final_score >= 80:
+        recommendation = "✅ 적극 매수"
+    elif final_score >= 60:
+        recommendation = "🟡 분할 매수"
+    elif final_score >= 40:
+        recommendation = "⚠️ 관망"
+    else:
+        recommendation = "❌ 매수 비추천"
+
+    return {
+        "ROE": roe,
+        "PER": pe,
+        "PBR": pb,
+        "이익률": margin,
+        "매출성장": growth,
+        "부채비율": debt,
+        "베타": beta,
+        "배당률": dividend,
+        "현금": cash,
+        "잉여현금": fcf,
+        "영업이익률": op_margin,
+        "점수(100점)": final_score,
+        "매수 판단": recommendation
     }
 
-    response = requests.post(url, json=payload)
-
-    try:
-        data = response.json()
-    except:
-        return f"JSON 파싱 실패: {response.text}"
-
-    if response.status_code != 200:
-        return f"""
-❌ API 에러
-status: {response.status_code}
-
-전체 응답:
-{json.dumps(data, indent=2, ensure_ascii=False)}
-"""
-
-    try:
-        return data["candidates"][0]["content"]["parts"][0]["text"]
-    except:
-        return f"""
-❌ 응답 구조 오류
-
-전체 JSON:
-{json.dumps(data, indent=2, ensure_ascii=False)}
-"""
+if st.button("분석 실행"):
+    if ticker:
+        try:
+            data = analyze_stock(ticker)
+            st.subheader("📈 분석 결과")
+            st.table(pd.DataFrame(data.items(), columns=["항목","값"]))
+            st.success(f"📌 최종 판단: {data['매수 판단']} / {data['점수(100점)']}점")
+        except Exception as e:
+            st.error(f"에러 발생: {e}")
+    else:
+        st.warning("티커를 입력하세요.")
