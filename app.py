@@ -2,11 +2,23 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-st.set_page_config(page_title="무료 종목 분석", layout="centered")
+st.set_page_config(page_title="무료 종목 분석 시스템", layout="centered")
 st.title("📊 무료 종목 분석 시스템")
 
 ticker = st.text_input("종목 티커 입력 (예: AAPL, TSLA)")
 
+# ---------- AI 요약 문장 ----------
+def generate_summary(score):
+    if score >= 80:
+        return "재무 안정성과 성장성이 모두 우수한 장기 투자 적합 종목입니다."
+    elif score >= 60:
+        return "재무 구조는 양호하나 일부 지표에서 개선이 필요한 종목입니다."
+    elif score >= 40:
+        return "성장성과 안정성 모두에서 주의가 필요한 종목입니다."
+    else:
+        return "재무 구조상 투자 위험이 높은 종목입니다."
+
+# ---------- 종목 분석 ----------
 def analyze_stock(ticker):
     stock = yf.Ticker(ticker)
     info = stock.info
@@ -47,6 +59,8 @@ def analyze_stock(ticker):
     else:
         recommendation = "❌ 매수 비추천"
 
+    summary = generate_summary(final_score)
+
     return {
         "ROE": roe,
         "PER": pe,
@@ -60,16 +74,26 @@ def analyze_stock(ticker):
         "잉여현금": fcf,
         "영업이익률": op_margin,
         "점수(100점)": final_score,
-        "매수 판단": recommendation
+        "매수 판단": recommendation,
+        "AI 요약": summary
     }
 
+# ---------- 실행 ----------
 if st.button("분석 실행"):
     if ticker:
         try:
             data = analyze_stock(ticker)
-            st.subheader("📈 분석 결과")
-            st.table(pd.DataFrame(data.items(), columns=["항목","값"]))
+
+            st.subheader("📈 종목 분석 결과")
+
+            display_data = data.copy()
+            summary = display_data.pop("AI 요약")
+
+            st.table(pd.DataFrame(display_data.items(), columns=["항목","값"]))
+
             st.success(f"📌 최종 판단: {data['매수 판단']} / {data['점수(100점)']}점")
+            st.info(f"🤖 AI 요약 평가: {summary}")
+
         except Exception as e:
             st.error(f"에러 발생: {e}")
     else:
