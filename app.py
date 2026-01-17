@@ -9,7 +9,9 @@ st.title("📊 Gemini 기반 11단계 종목 분석")
 ticker = st.text_input("종목 티커 입력 (예: AAPL, TSLA)")
 
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-model = genai.GenerativeModel("gemini-1.5-flash")
+
+# 🔥 모델명 수정
+model = genai.GenerativeModel("gemini-1.5-flash-latest")
 
 def gemini_analysis(info, ticker):
     data = f"""
