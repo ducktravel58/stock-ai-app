@@ -2,6 +2,12 @@ import streamlit as st
 import requests
 import json
 
+import google.generativeai as genai
+genai.configure(api_key="너의키")
+for m in genai.list_models():
+    print(m.name)
+
+
 API_KEY = "YOUR_GEMINI_API_KEY"
 
 MODEL = "models/gemini-1.5-flash-001"
