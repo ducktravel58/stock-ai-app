@@ -1,64 +1,39 @@
 import streamlit as st
-import yfinance as yf
-import google.generativeai as genai
+import requests
+import json
 
-st.set_page_config(page_title="Gemini 주식 분석", layout="centered")
+API_KEY = "YOUR_GEMINI_API_KEY"
 
-st.title("📊 Gemini 기반 11단계 종목 분석")
+MODEL = "models/gemini-1.5-flash-001"
 
-ticker = st.text_input("종목 티커 입력 (예: AAPL, TSLA)")
+def ask_gemini(prompt):
+    url = f"https://generativelanguage.googleapis.com/v1/models/{MODEL}:generateContent?key={API_KEY}"
 
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    payload = {
+        "contents": [
+            {
+                "parts": [{"text": prompt}]
+            }
+        ]
+    }
 
-# 🔥 모델명 수정
-model = genai.GenerativeModel("gemini-1.5-flash-latest")
+    response = requests.post(url, json=payload)
 
-def gemini_analysis(info, ticker):
-    data = f"""
-기업명:{info.get('longName')}
-시가총액:{info.get('marketCap')}
-PER:{info.get('trailingPE')}
-PBR:{info.get('priceToBook')}
-ROE:{info.get('returnOnEquity')}
-매출성장:{info.get('revenueGrowth')}
-업종:{info.get('sector')}
-"""
+    if response.status_code != 200:
+        return f"에러 발생: {response.text}"
 
-    prompt = f"""
-다음 기업 데이터를 기반으로 아래 11단계를 순서대로 분석하고
-마지막에 종합 투자 결론을 내려라.
+    data = response.json()
 
-1. 사업 설명
-2. 최근 이슈
-3. 산업 위치
-4. 경쟁우위
-5. 재무평가
-6. 리스크
-7. 3년 시나리오
-8. 거시 민감도
-9. 밸류에이션
-10. 투자 테제
-11. 최종 결론
+    return data["candidates"][0]["content"]["parts"][0]["text"]
 
-기업 데이터:
-{data}
+st.title("📊 Gemini 기반 종목 분석 AI")
 
-종목:{ticker}
-"""
+ticker = st.text_input("종목 티커 입력")
 
-    response = model.generate_content(prompt)
-    return response.text
-
-
-if st.button("Gemini 11단계 분석 실행"):
+if st.button("분석 실행"):
     if ticker:
-        with st.spinner("Gemini 분석 중..."):
-            try:
-                stock = yf.Ticker(ticker)
-                info = stock.info
-                result = gemini_analysis(info, ticker)
-                st.markdown(result)
-            except Exception as e:
-                st.error(f"에러 발생: {e}")
+        prompt = f"{ticker} 종목을 재무적 관점에서 장기투자 기준으로 분석해줘. PER, 성장성, 위험요소 포함해서 결론까지 내려줘."
+        result = ask_gemini(prompt)
+        st.write(result)
     else:
         st.warning("티커를 입력하세요.")
