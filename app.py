@@ -1,14 +1,28 @@
+import streamlit as st
+import yfinance as yf
+from openai import OpenAI
+
+# OpenAI Client
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+st.set_page_config(page_title="AI 주식 분석", layout="centered")
+
+st.title("📊 AI 기반 11단계 종목 분석")
+
+ticker = st.text_input("종목 티커 입력 (예: AAPL, TSLA)")
+
 def run_analysis(ticker):
     stock = yf.Ticker(ticker)
     info = stock.info
 
     data = f"""
-기업명:{info.get('longName')}
-PER:{info.get('trailingPE')}
-PBR:{info.get('priceToBook')}
-ROE:{info.get('returnOnEquity')}
-매출성장:{info.get('revenueGrowth')}
-업종:{info.get('sector')}
+기업명: {info.get('longName')}
+시가총액: {info.get('marketCap')}
+PER: {info.get('trailingPE')}
+PBR: {info.get('priceToBook')}
+ROE: {info.get('returnOnEquity')}
+매출성장률: {info.get('revenueGrowth')}
+업종: {info.get('sector')}
 """
 
     prompt = f"""
@@ -24,13 +38,13 @@ ROE:{info.get('returnOnEquity')}
 7. 3년 시나리오
 8. 거시 민감도
 9. 밸류에이션
-10. 투자테제
+10. 투자 테제
 11. 최종 결론
 
 기업 데이터:
 {data}
 
-종목:{ticker}
+종목: {ticker}
 """
 
     response = client.responses.create(
@@ -39,3 +53,15 @@ ROE:{info.get('returnOnEquity')}
     )
 
     return response.output_text
+
+
+if st.button("11단계 AI 분석 실행"):
+    if ticker:
+        with st.spinner("AI 분석 중..."):
+            try:
+                result = run_analysis(ticker)
+                st.markdown(result)
+            except Exception as e:
+                st.error(f"에러 발생: {e}")
+    else:
+        st.warning("티커를 입력하세요.")
