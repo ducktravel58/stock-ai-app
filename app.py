@@ -1,3 +1,12 @@
+import streamlit as st
+import requests
+import json
+
+API_KEY = "AIzaSyCLPLeL68Q9BwIUQFkH1fQ5dIadjD0yxdc"
+MODEL = "models/gemini-1.5-flash"
+
+
+
 import json
 import requests
 
