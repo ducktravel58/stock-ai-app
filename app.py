@@ -1,40 +1,38 @@
 import streamlit as st
-from openai import OpenAI
+import yfinance as yf
 
-st.set_page_config(page_title="Stock Research AI", layout="wide")
-st.title("📊 원스톱 주식 연구 AI")
+st.title("📊 무료 종목 분석 시스템")
 
-# OpenAI Client 생성
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+ticker = st.text_input("종목 티커 입력 (예: AAPL, TSLA)")
 
-ticker = st.text_input("분석할 종목 티커 입력 (예: AAPL, TSLA)")
+def analyze(ticker):
+    stock = yf.Ticker(ticker)
+    info = stock.info
 
-prompts = [
-    "이 회사의 사업을 쉽게 설명해줘.",
-    "최근 뉴스, 실적, 주요 이벤트 요약 (출처 포함).",
-    "산업 트렌드, 성장동력, 주요 리스크 설명.",
-    "경제적 해자 분석.",
-    "재무 건전성 요약.",
-    "레드 플래그 정리.",
-    "3~5년 시나리오 분석.",
-    "거시 민감도.",
-    "밸류에이션 맥락.",
-    "장기 투자 테제.",
-    "지속 모니터링 포인트."
-]
+    result = f"""
+📌 기업명: {info.get("longName","N/A")}
+📌 시가총액: {info.get("marketCap","N/A")}
+📌 PER: {info.get("trailingPE","N/A")}
+📌 PBR: {info.get("priceToBook","N/A")}
+📌 ROE: {info.get("returnOnEquity","N/A")}
+📌 매출 성장률: {info.get("revenueGrowth","N/A")}
+📌 업종: {info.get("sector","N/A")}
+📌 국가: {info.get("country","N/A")}
 
-def ask(prompt):
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=prompt
-    )
-    return response.output_text
+📊 종합 해석:
+이 종목은 재무 지표 기준으로 장기 투자 관점에서 
+{'우수' if info.get("returnOnEquity",0)>0.15 else '보통'}한 수익성을 보이고 있으며,
+PER 기준으로 {'저평가' if info.get("trailingPE",99)<20 else '고평가'} 구간입니다.
+"""
 
-if st.button("🚀 원스톱 분석 실행") and ticker:
-    st.success(f"{ticker} 자동 분석 시작")
+    return result
 
-    for i, p in enumerate(prompts, 1):
-        with st.spinner(f"{i}단계 분석 중..."):
-            result = ask(f"{p}\n종목: {ticker}")
-            st.subheader(f"{i}. {p}")
-            st.write(result)
+if st.button("분석 실행"):
+    if ticker:
+        try:
+            result = analyze(ticker)
+            st.text(result)
+        except:
+            st.error("티커 오류 또는 데이터 없음")
+    else:
+        st.warning("티커를 입력하세요.")
