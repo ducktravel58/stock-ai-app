@@ -1,10 +1,11 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 
 st.set_page_config(page_title="Stock Research AI", layout="wide")
 st.title("📊 원스톱 주식 연구 AI")
 
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# OpenAI Client 생성
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 ticker = st.text_input("분석할 종목 티커 입력 (예: AAPL, TSLA)")
 
@@ -23,11 +24,11 @@ prompts = [
 ]
 
 def ask(prompt):
-    response = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=[{"role":"user","content":prompt}]
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
     )
-    return response.choices[0].message.content
+    return response.output_text
 
 if st.button("🚀 원스톱 분석 실행") and ticker:
     st.success(f"{ticker} 자동 분석 시작")
